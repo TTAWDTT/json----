@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 import shutil
 import time
+import os
 
 
 def parse_args():
@@ -54,8 +55,16 @@ def process_file(path: Path, field: str, new_value: Any):
     except Exception as e:
         print(f"跳过 {path}（无法解析为 JSON）：{e}")
         return False
-    # backup
-    bak = path.with_suffix(path.suffix + f".bak-{int(time.time())}")
+    # backup -> place backups under workspace/json_files/backups/ if possible
+    ts = int(time.time())
+    # try to find workspace root (assume two levels up from script) or use file parent
+    try:
+        workspace_root = Path(__file__).resolve().parent
+    except Exception:
+        workspace_root = path.parent
+    backups_dir = workspace_root / "json_files" / "backups"
+    os.makedirs(backups_dir, exist_ok=True)
+    bak = backups_dir / f"{path.name}.bak-{ts}"
     shutil.copy2(path, bak)
     replace_in_obj(data, field, new_value)
     dump_json(data, path)
@@ -66,6 +75,13 @@ def process_file(path: Path, field: str, new_value: Any):
 def main():
     args = parse_args()
     p = Path(args.path)
+    # If user passed the repository root ('.' or script parent), prefer json_files/
+    if p.exists() and p.is_dir():
+        # Heuristic: if the directory contains replace_json_field.py, treat it as workspace root
+        if (p / Path(__file__).name).exists():
+            jf = p / "json_files"
+            if jf.exists():
+                p = jf
     # parse replacement value
     if args.json_value:
         try:
