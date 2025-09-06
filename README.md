@@ -33,7 +33,7 @@ python .\replace_json_field.py --path .\data --field meta --value '{"a":1, "b":[
 在 bash（Linux/macOS）下传入 JSON 字面量示例：
 
 ```bash
-python3 ./replace_json_field.py --path ./test.json --field foo --value '{"k": "v"}' --json-value
+python ./replace_json_field.py --path ./test.json --field foo --value '{"k": "v"}' --json-value
 ```
 
 ## 备份与恢复
