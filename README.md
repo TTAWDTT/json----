@@ -2,6 +2,14 @@
 
 一个小型、跨平台的 Python 工具，用于在单个 JSON 文件或目录（递归）内查找指定字段名并将其值替换为用户提供的统一内容。
 
+## 更新记录（2025-09-06）
+
+- 在 Web UI (`templates/jsonmgr/view.html`) 中新增左上角侧边栏，用于浏览仓库中的 JSON 文件和 backups；侧边栏支持平滑展开/收起并能浏览备份子目录。
+- 修复模板中的若干 JS 与缩进问题，清理了生成补丁时遗留的无效标记，确保页面脚本能正常运行。
+- 增加了异步加载完整文件的按钮（在大文件被截断显示时可点击加载完整内容），并提供 `/api/files` 简单接口以便客户端获取文件与备份列表。
+
+（详见 `templates/jsonmgr/view.html` 与 `jsonmgr/views.py`）
+
 ## 主要功能
 - 支持对单个文件或目录递归处理（按扩展名过滤，默认 `.json`）。
 - 支持将替换值按字符串处理或解析为 JSON 字面量（数字、布尔、数组、对象、null）。
@@ -95,4 +103,55 @@ Copy-Item -Path .\json_files\backups\test.json.bak-1612345678 -Destination .\jso
 - 增加 `--dry-run` 模式，仅打印将被替换的键与位置，不写回文件。
 - 支持按 JSONPath 精确定位要替换的条目。
 - 支持并行处理大目录以及备份保留策略（保留最近 N 个备份）。
+ 
+## Web UI 使用（更详细）
+
+- 访问主页：在本机运行 `python manage.py runserver` 后访问 `http://localhost:8000/`，页面会列出 `json_files/` 下的可用 `.json` 文件。
+- 打开文件：点击某行或通过 `?name=<file>` 参数访问文件页面。
+- 文件展示：对于大文件，页面默认只显示前 200KB，并在顶部以斜体注释提示“注：文件较大，只显示前 200KB（可点击下载或在页面异步加载完整内容）”。可点击“在页面加载完整文件”按钮获取完整内容并一次性渲染。
+- 编辑替换：页面下方提供字段名与替换值输入框，勾选“值为 JSON 字面量”以将替换值按 JSON 解析。提交表单会在写回前生成备份。
+- 侧边栏：左上角菜单按钮打开侧边栏，可浏览仓库文件并展开 backups 目录；支持平滑动画与嵌套备份浏览。
+
+## API 端点（简要）
+
+- `GET /api/files` — 返回 JSON 对象 `{ files: ["a.json", ...], backups: { "a.json": ["a.json.bak-...", ...], ... } }`。用于客户端异步加载文件与备份列表。
+- `GET /raw/?name=<file>` — 返回指定文件的原始内容（用于下载或在页面加载完整内容时请求）。
+
+## 开发与本地运行
+
+1. 建议使用 Python 虚拟环境：
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+2. 迁移并启动开发服务器：
+
+```powershell
+python manage.py migrate --noinput
+python manage.py runserver 0.0.0.0:8000
+```
+
+3. 如果修改 `templates/jsonmgr/view.html`，浏览器刷新后即可看到更改（开发模式下 Django 会自动加载模板变更）。
+
+## 示例场景
+
+- 快速替换：将 `json_files/test.json` 中所有 `name` 字段替换为字符串 `REPLACED`：
+
+```powershell
+python .\replace_json_field.py --path .\json_files\test.json --field name --value REPLACED
+```
+
+- 使用 Web UI 在页面上替换：打开 `http://localhost:8000/` → 点击某文件 → 在替换表单中填写字段名和值并提交。
+
+## 常见问题
+
+- Q：如何恢复某次备份？
+	- A：备份保存在 `json_files/backups/`，你可以手动将备份复制回原文件名（示例见上文）。
+
+- Q：如何避免误替换？
+	- A：先备份整个目录或使用版本控制；或在脚本中实现 `--dry-run` 模式以预览变更。
+
 
